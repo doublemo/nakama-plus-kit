@@ -2,6 +2,8 @@ package nakamapluskit
 
 import (
 	"context"
+	"errors"
+	"io"
 
 	"github.com/heroiclabs/nakama-common/rtapi"
 	"go.uber.org/atomic"
@@ -71,7 +73,11 @@ IncomingLoop:
 
 		payload, err := s.conn.Recv()
 		if err != nil {
-			s.logger.Debug("Error reading message from client", zap.Error(err))
+			if errors.Is(err, io.EOF) {
+				break
+			}
+
+			s.logger.Warn("Error reading message from client", zap.Error(err))
 			break
 		}
 		s.handler.NotifyMsg(s, payload)
