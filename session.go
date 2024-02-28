@@ -18,6 +18,7 @@ type (
 		Role() string
 		Context() context.Context
 		Consume()
+		Send(msg *rtapi.NakamaPeer_Envelope) error
 	}
 
 	LocalSession struct {
