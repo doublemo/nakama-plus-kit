@@ -192,6 +192,14 @@ func (s *Server) Stop() {
 	})
 }
 
+func (s *Server) ServiceRegistry() *ServiceRegistry {
+	return s.serviceRegistry
+}
+
+func (s *Server) SessionRegistry() *SessionRegistry {
+	return s.sessionRegistry
+}
+
 func ensureValidToken(config *Configuration) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 		md, ok := metadata.FromIncomingContext(ctx)
