@@ -6,7 +6,9 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/doublemo/nakama-plus-kit/core/etcd"
 	pool "github.com/doublemo/nakama-plus-kit/core/grpc-pool"
@@ -38,6 +40,7 @@ type Server struct {
 	serviceRegistry *ServiceRegistry
 	sessionRegistry *SessionRegistry
 	config          *Configuration
+	once            sync.Once
 }
 
 func NewServer(ctx context.Context, logger *zap.Logger, protojsonMarshaler *protojson.MarshalOptions, protojsonUnmarshaler *protojson.UnmarshalOptions, md map[string]string, c *Configuration) *Server {
@@ -157,8 +160,36 @@ func (s *Server) Stream(stream rtapi.NakamaPeerApi_StreamServer) error {
 	return nil
 }
 
-func (s *Server) Handler(etcd *etcd.ClientV3, h Handler) {
+func (s *Server) Start(etcd *etcd.ClientV3, h Handler, updated func(serviceRegistry *ServiceRegistry)) {
 	s.handler.Store(h)
+	ch := make(chan struct{}, 1)
+	s.serviceRegistry.Start(etcd, ch)
+
+	go func() {
+		for {
+			select {
+			case <-ch:
+				updated(s.serviceRegistry)
+
+			case <-s.ctx.Done():
+				return
+			}
+		}
+	}()
+}
+
+func (s *Server) Stop() {
+	s.once.Do(func() {
+		if s.ctxCancelFn == nil {
+			return
+		}
+
+		if s.serviceRegistry != nil {
+			s.serviceRegistry.Shutdown(time.Second * 10)
+		}
+
+		s.ctxCancelFn()
+	})
 }
 
 func ensureValidToken(config *Configuration) grpc.UnaryServerInterceptor {
