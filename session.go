@@ -60,7 +60,6 @@ func (s *LocalSession) Context() context.Context {
 }
 
 func (s *LocalSession) Consume() {
-	fmt.Println("--sadasd-----")
 	go s.processOutgoing()
 IncomingLoop:
 	for {
@@ -72,6 +71,7 @@ IncomingLoop:
 		}
 
 		payload, err := s.conn.Recv()
+		fmt.Println("dd----v---", payload, err)
 		if err != nil {
 			s.logger.Debug("Error reading message from client", zap.Error(err))
 			break
