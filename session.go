@@ -2,6 +2,7 @@ package nakamapluskit
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/heroiclabs/nakama-common/rtapi"
 	"go.uber.org/atomic"
@@ -59,6 +60,7 @@ func (s *LocalSession) Context() context.Context {
 }
 
 func (s *LocalSession) Consume() {
+	fmt.Println("--sadasd-----")
 	go s.processOutgoing()
 IncomingLoop:
 	for {
@@ -74,6 +76,7 @@ IncomingLoop:
 			s.logger.Debug("Error reading message from client", zap.Error(err))
 			break
 		}
+
 		s.handler.NotifyMsg(s, payload)
 	}
 	s.Close()
