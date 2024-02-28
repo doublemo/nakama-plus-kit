@@ -8,6 +8,8 @@ import (
 	"github.com/heroiclabs/nakama-common/rtapi"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 var ErrSessionQueueFull = errors.New("session outgoing queue full")
@@ -93,6 +95,13 @@ IncomingLoop:
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				break
+			}
+
+			switch status.Code(err) {
+			case codes.Canceled:
+				break
+			default:
+
 			}
 
 			s.logger.Warn("Error reading message from client", zap.Error(err))
