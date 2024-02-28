@@ -101,5 +101,5 @@ OutgoingLoop:
 }
 
 func (s *LocalSession) Close() {
-
+	s.logger.Info("Closed client connection", zap.String("id", s.id))
 }
