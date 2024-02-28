@@ -2,7 +2,6 @@ package nakamapluskit
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/heroiclabs/nakama-common/rtapi"
 	"go.uber.org/atomic"
@@ -75,8 +74,6 @@ IncomingLoop:
 			s.logger.Debug("Error reading message from client", zap.Error(err))
 			break
 		}
-
-		fmt.Println("dd----v---", s.handler)
 		s.handler.NotifyMsg(s, payload)
 	}
 	s.Close()
