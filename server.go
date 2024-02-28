@@ -3,6 +3,7 @@ package nakamapluskit
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"net"
 	"strconv"
 	"strings"
@@ -133,10 +134,11 @@ func NewServer(ctx context.Context, logger *zap.Logger, protojsonMarshaler *prot
 }
 
 func (s *Server) Call(ctx context.Context, in *rtapi.NakamaPeer_Envelope) (*rtapi.NakamaPeer_Envelope, error) {
+	fmt.Println("收到消息了 call")
 	if h, ok := s.handler.Load().(Handler); ok && h != nil {
+		fmt.Println("收到消息了w call")
 		return h.Call(ctx, in)
 	}
-
 	return nil, status.Error(codes.Internal, "Missing handler")
 }
 
