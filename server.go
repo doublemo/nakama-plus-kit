@@ -188,6 +188,7 @@ func (s *Server) Stop() {
 			s.serviceRegistry.Shutdown(time.Second * 10)
 		}
 
+		s.grpc.GracefulStop()
 		s.ctxCancelFn()
 	})
 }
