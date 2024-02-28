@@ -10,6 +10,8 @@ import (
 	"go.uber.org/zap"
 )
 
+var ErrSessionQueueFull = errors.New("session outgoing queue full")
+
 type (
 	Session interface {
 		ID() string
@@ -60,6 +62,21 @@ func (s *LocalSession) Context() context.Context {
 	return s.ctx
 }
 
+func (s *LocalSession) Send(msg *rtapi.NakamaPeer_Envelope) error {
+	select {
+	case s.outgoingCh <- msg:
+		return nil
+	default:
+		// The outgoing queue is full, likely because the remote client can't keep up.
+		// Terminate the connection immediately because the only alternative that doesn't block the server is
+		// to start dropping messages, which might cause unexpected behaviour.
+		s.logger.Warn("Could not write message, session outgoing queue full")
+		// Close in a goroutine as the method can block
+		go s.Close()
+		return ErrSessionQueueFull
+	}
+}
+
 func (s *LocalSession) Consume() {
 	go s.processOutgoing()
 IncomingLoop:
@@ -108,4 +125,5 @@ OutgoingLoop:
 
 func (s *LocalSession) Close() {
 	s.logger.Info("Closed client connection", zap.String("id", s.id))
+	s.ctxCancelFn()
 }
