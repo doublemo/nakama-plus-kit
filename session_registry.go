@@ -35,15 +35,19 @@ func (r *SessionRegistry) Get(sessionID string) Session {
 
 func (r *SessionRegistry) Add(session Session) {
 	r.sessions.Store(session.ID(), session)
-	r.sessionCount.Inc()
 	r.Lock()
 	m, ok := r.sessionRoles[session.Role()]
 	if !ok {
 		r.sessionRoles[session.Role()] = map[string]bool{session.ID(): true}
 	} else {
+		if m[session.ID()] {
+			r.Unlock()
+			return
+		}
 		m[session.ID()] = true
 	}
 	r.Unlock()
+	r.sessionCount.Inc()
 }
 
 func (r *SessionRegistry) Remove(sessionID string) {

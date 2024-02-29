@@ -3,6 +3,7 @@ package nakamapluskit
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 
 	"github.com/heroiclabs/nakama-common/rtapi"
@@ -97,9 +98,10 @@ IncomingLoop:
 				break
 			}
 
+			fmt.Println("----------", status.Code(err))
 			switch status.Code(err) {
 			case codes.Canceled:
-				break
+				break IncomingLoop
 			default:
 
 			}

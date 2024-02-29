@@ -142,29 +142,22 @@ func (s *ServiceRegistry) update(client *etcd.ClientV3, updateChan chan struct{}
 			continue
 		}
 
-		num++
-		m, ok := nodes[nodemeta.Role]
-		if !ok {
-			roleNum++
-			nodes[nodemeta.Role] = make(map[string]runtime.PeerService)
-			service := NewService(s.ctx, s.logger, s.meta.Name, s.meta.Role, nodemeta, &grpcpool.Options{
-				MaxIdle:              s.config.Grpc.GrpcPoolMaxIdle,
-				MaxActive:            s.config.Grpc.GrpcPoolMaxActive,
-				MaxConcurrentStreams: s.config.Grpc.GrpcPoolMaxConcurrentStreams,
-				Reuse:                s.config.Grpc.GrpcPoolReuse,
-			})
-
-			nodes[nodemeta.Role][nodemeta.Name] = service
-			continue
-		}
-
-		//
-		m[nodemeta.Name] = NewService(s.ctx, s.logger, s.meta.Name, s.meta.Role, nodemeta, &grpcpool.Options{
+		service := NewService(s.ctx, s.logger, s.meta.Name, s.meta.Role, nodemeta, &grpcpool.Options{
 			MaxIdle:              s.config.Grpc.GrpcPoolMaxIdle,
 			MaxActive:            s.config.Grpc.GrpcPoolMaxActive,
 			MaxConcurrentStreams: s.config.Grpc.GrpcPoolMaxConcurrentStreams,
 			Reuse:                s.config.Grpc.GrpcPoolReuse,
 		})
+
+		num++
+		m, ok := nodes[nodemeta.Role]
+		if !ok {
+			roleNum++
+			nodes[nodemeta.Role] = make(map[string]runtime.PeerService)
+			nodes[nodemeta.Role][nodemeta.Name] = service
+			continue
+		}
+		m[nodemeta.Name] = service
 	}
 
 	s.Lock()
