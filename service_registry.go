@@ -81,7 +81,7 @@ func (s *ServiceRegistry) Shutdown(timeout time.Duration) {
 }
 
 func (s *ServiceRegistry) Start(client *etcd.ClientV3, updateChan chan struct{}) {
-	s.update(client, updateChan)
+	// s.update(client, updateChan)
 	go func() {
 		defer func() {
 			if err := client.Deregister(s.meta.Name); err != nil {
