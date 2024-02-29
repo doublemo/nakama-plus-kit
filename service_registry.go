@@ -142,6 +142,14 @@ func (s *ServiceRegistry) update(client *etcd.ClientV3, updateChan chan struct{}
 			continue
 		}
 
+		s.RLock()
+		if byRole, ok := s.services[nodemeta.Role]; ok {
+			if _, ok := byRole[nodemeta.Name]; !ok {
+				nodemeta.IsNew = true
+			}
+		}
+		s.RUnlock()
+
 		service := NewService(s.ctx, s.logger, s.meta.Name, s.meta.Role, nodemeta, &grpcpool.Options{
 			MaxIdle:              s.config.Grpc.GrpcPoolMaxIdle,
 			MaxActive:            s.config.Grpc.GrpcPoolMaxActive,

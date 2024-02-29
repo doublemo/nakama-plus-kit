@@ -3,7 +3,6 @@ package nakamapluskit
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 
 	"github.com/heroiclabs/nakama-common/rtapi"
@@ -98,7 +97,6 @@ IncomingLoop:
 				break
 			}
 
-			fmt.Println("----------", status.Code(err))
 			switch status.Code(err) {
 			case codes.Canceled:
 				break IncomingLoop
@@ -109,6 +107,7 @@ IncomingLoop:
 			s.logger.Warn("Error reading message from client", zap.Error(err))
 			break
 		}
+
 		s.handler.NotifyMsg(s, payload)
 	}
 	s.Close()
@@ -136,6 +135,10 @@ OutgoingLoop:
 }
 
 func (s *LocalSession) Close() {
+	if ok := s.stopped.Swap(true); ok {
+		return
+	}
+
 	s.logger.Info("Closed client connection", zap.String("id", s.id))
 	s.ctxCancelFn()
 }
