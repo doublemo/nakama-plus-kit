@@ -67,9 +67,13 @@ func NewServer(ctx context.Context, logger *zap.Logger, protojsonMarshaler *prot
 		grpc.MaxSendMsgSize(pool.MaxSendMsgSize),
 		grpc.MaxRecvMsgSize(pool.MaxRecvMsgSize),
 		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+			MinTime:             5 * time.Second,
 			PermitWithoutStream: true,
 		}),
 		grpc.KeepaliveParams(keepalive.ServerParameters{
+			// MaxConnectionIdle:     30 * time.Second,
+			// MaxConnectionAge:      30 * time.Second,
+			// MaxConnectionAgeGrace: 5 * time.Second,
 			Time:    pool.KeepAliveTime,
 			Timeout: pool.KeepAliveTimeout,
 		}),

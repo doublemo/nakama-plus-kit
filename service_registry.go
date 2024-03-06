@@ -59,6 +59,20 @@ func (s *ServiceRegistry) GetServicesByRole(role string) []runtime.PeerService {
 	return services
 }
 
+func (s *ServiceRegistry) GetServices() map[string]map[string]runtime.PeerService {
+	s.RLock()
+	defer s.RUnlock()
+
+	services := make(map[string]map[string]runtime.PeerService, len(s.services))
+	for k, v := range s.services {
+		services[k] = make(map[string]runtime.PeerService, len(v))
+		for kk, vv := range v {
+			services[k][kk] = vv
+		}
+	}
+	return services
+}
+
 func (s *ServiceRegistry) GetServicesWithNakama() []runtime.PeerService {
 	return s.GetServicesByRole("nakama")
 }
