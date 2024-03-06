@@ -61,6 +61,7 @@ func (r *SessionRegistry) Remove(sessionID string) {
 	r.Lock()
 	m, ok := r.sessionRoles[session.Role()]
 	if !ok {
+		r.Unlock()
 		return
 	}
 	delete(m, sessionID)
@@ -80,6 +81,7 @@ func (r *SessionRegistry) RangeRole(role string, fn func(Session) bool) {
 	r.RLock()
 	m, ok := r.sessionRoles[role]
 	if !ok {
+		r.RUnlock()
 		return
 	}
 
