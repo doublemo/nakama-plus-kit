@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"strings"
-	"sync"
 	"time"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -30,17 +29,27 @@ type (
 	}
 
 	ClientV3 struct {
-		ctx           context.Context
-		ctxCancelFn   context.CancelFunc
-		logger        *zap.Logger
-		kv            clientv3.KV
-		client        *clientv3.Client
-		watcher       clientv3.Watcher
-		leaseID       clientv3.LeaseID
-		hbch          <-chan *clientv3.LeaseKeepAliveResponse
-		leaser        clientv3.Lease
+		logger *zap.Logger
+		cli    *clientv3.Client
+		ctx    context.Context
+
+		kv clientv3.KV
+
+		// Watcher interface instance, used to leverage Watcher.Close()
+		watcher clientv3.Watcher
+		// watcher context
+		wctx context.Context
+		// watcher cancel func
+		wcf context.CancelFunc
+
+		// leaseID will be 0 (clientv3.NoLease) if a lease was not created
+		leaseID clientv3.LeaseID
+
+		hbch <-chan *clientv3.LeaseKeepAliveResponse
+		// Lease interface instance, used to leverage Lease.Close()
+		leaser clientv3.Lease
+
 		servicePrefix string
-		once          sync.Once
 	}
 )
 
@@ -61,31 +70,29 @@ func NewClientv3Config() *Clientv3Config {
 }
 
 func NewClientV3(ctx context.Context, logger *zap.Logger, c *Clientv3Config) *ClientV3 {
-	ctx, cancel := context.WithCancel(ctx)
-	s := &ClientV3{
-		ctx:           ctx,
-		ctxCancelFn:   cancel,
-		logger:        logger,
-		servicePrefix: c.ServicePrefix,
-	}
-
 	cfg, err := bindPeerEtcdV3Config2V3Config(c)
 	if err != nil {
 		logger.Fatal("Failed to build etcd config", zap.Error(err))
 	}
 
-	client, err := clientv3.New(*cfg)
+	cfg.Context = ctx
+	cli, err := clientv3.New(*cfg)
 	if err != nil {
 		logger.Fatal("Failed to connect etcd", zap.Error(err))
 	}
 
-	s.kv = clientv3.NewKV(client)
-	s.watcher = clientv3.NewWatcher(client)
-	s.leaser = clientv3.NewLease(client)
-	s.client = client
-	return s
+	return &ClientV3{
+		logger:        logger,
+		cli:           cli,
+		ctx:           ctx,
+		kv:            clientv3.NewKV(cli),
+		servicePrefix: c.ServicePrefix,
+	}
 }
 
+func (c *ClientV3) LeaseID() int64 { return int64(c.leaseID) }
+
+// GetEntries implements the etcd Client interface.
 func (c *ClientV3) GetEntries() ([]string, error) {
 	resp, err := c.kv.Get(c.ctx, c.servicePrefix, clientv3.WithPrefix())
 	if err != nil {
@@ -104,8 +111,19 @@ func (c *ClientV3) ServicePrefix() string {
 	return c.servicePrefix
 }
 
+func (c *ClientV3) Update(name, value string) error {
+	if _, err := c.kv.Put(c.ctx, c.Key(name), value, clientv3.WithLease(c.leaseID)); err != nil {
+		return err
+	}
+	return nil
+}
+
+// WatchPrefix implements the etcd Client interface.
 func (c *ClientV3) Watch(ch chan struct{}) {
-	wch := c.watcher.Watch(c.ctx, c.servicePrefix, clientv3.WithPrefix(), clientv3.WithRev(0))
+	c.wctx, c.wcf = context.WithCancel(c.ctx)
+	c.watcher = clientv3.NewWatcher(c.cli)
+
+	wch := c.watcher.Watch(c.wctx, c.servicePrefix, clientv3.WithPrefix(), clientv3.WithRev(0))
 	ch <- struct{}{}
 	for wr := range wch {
 		if wr.Canceled {
@@ -115,29 +133,49 @@ func (c *ClientV3) Watch(ch chan struct{}) {
 	}
 }
 
-func (c *ClientV3) Update(name, value string) error {
-	if _, err := c.client.Put(c.ctx, c.Key(name), value, clientv3.WithLease(c.leaseID)); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (c *ClientV3) Register(name, value string) error {
-	grantResp, err := c.leaser.Grant(c.ctx, 180)
+	var err error
+
+	if c.leaser != nil {
+		c.leaser.Close()
+	}
+	c.leaser = clientv3.NewLease(c.cli)
+
+	if c.watcher != nil {
+		c.watcher.Close()
+	}
+	c.watcher = clientv3.NewWatcher(c.cli)
+	if c.kv == nil {
+		c.kv = clientv3.NewKV(c.cli)
+	}
+
+	//s.TTL = NewTTLOption(time.Second*3, time.Second*10)
+	ttl := time.Second * 10
+	grantResp, err := c.leaser.Grant(c.ctx, int64(ttl.Seconds()))
 	if err != nil {
 		return err
 	}
 	c.leaseID = grantResp.ID
-	_, err = c.kv.Put(c.ctx, c.Key(name), value, clientv3.WithLease(c.leaseID))
+
+	_, err = c.kv.Put(
+		c.ctx,
+		c.Key(name),
+		value,
+		clientv3.WithLease(c.leaseID),
+	)
 	if err != nil {
 		return err
 	}
 
+	// this will keep the key alive 'forever' or until we revoke it or
+	// the context is canceled
 	c.hbch, err = c.leaser.KeepAlive(c.ctx, c.leaseID)
 	if err != nil {
 		return err
 	}
 
+	// discard the keepalive response, make etcd library not to complain
+	// fix bug #799
 	go func() {
 		for {
 			select {
@@ -151,31 +189,32 @@ func (c *ClientV3) Register(name, value string) error {
 			}
 		}
 	}()
+
 	return nil
 }
 
 func (c *ClientV3) Deregister(name string) error {
 	defer c.close()
-	if _, err := c.client.Delete(c.ctx, c.Key(name), clientv3.WithIgnoreLease()); err != nil {
+
+	if _, err := c.cli.Delete(c.ctx, c.Key(name), clientv3.WithIgnoreLease()); err != nil {
 		return err
 	}
+
 	return nil
 }
 
+// close will close any open clients and call
+// the watcher cancel func
 func (c *ClientV3) close() {
-	c.once.Do(func() {
-		if c.leaser != nil {
-			c.leaser.Close()
-		}
-
-		if c.watcher != nil {
-			c.watcher.Close()
-		}
-
-		if c.ctxCancelFn != nil {
-			c.ctxCancelFn()
-		}
-	})
+	if c.leaser != nil {
+		c.leaser.Close()
+	}
+	if c.watcher != nil {
+		c.watcher.Close()
+	}
+	if c.wcf != nil {
+		c.wcf()
+	}
 }
 
 func (c *ClientV3) Key(name string) string {
