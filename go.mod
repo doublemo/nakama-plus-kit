@@ -3,7 +3,7 @@ module github.com/doublemo/nakama-plus-kit
 go 1.21.4
 
 require (
-	github.com/doublemo/nakama-plus-common v1.0.2
+	github.com/doublemo/nakama-plus-common v1.0.4
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	go.etcd.io/etcd v3.3.27+incompatible
 	go.etcd.io/etcd/client/v3 v3.5.12
