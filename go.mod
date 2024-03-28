@@ -2,11 +2,9 @@ module github.com/doublemo/nakama-plus-kit
 
 go 1.21.4
 
-replace github.com/heroiclabs/nakama-common => ../nakama-plus-common
-
 require (
+	github.com/doublemo/nakama-plus-common v1.0.2
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
-	github.com/heroiclabs/nakama-common v1.30.1
 	go.etcd.io/etcd v3.3.27+incompatible
 	go.etcd.io/etcd/client/v3 v3.5.12
 	go.uber.org/atomic v1.7.0
@@ -25,6 +23,7 @@ require (
 	github.com/coreos/pkg v0.0.0-20240122114842-bbd7aa9bf6fb // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/heroiclabs/nakama-common v1.31.0 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/prometheus/client_golang v1.11.1 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect

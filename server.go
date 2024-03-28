@@ -10,11 +10,11 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/doublemo/nakama-plus-common/rtapi"
 	"github.com/doublemo/nakama-plus-kit/core/etcd"
 	pool "github.com/doublemo/nakama-plus-kit/core/grpc-pool"
 	"github.com/doublemo/nakama-plus-kit/core/math"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	"github.com/heroiclabs/nakama-common/rtapi"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/channelz/service"

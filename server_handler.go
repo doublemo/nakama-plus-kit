@@ -3,7 +3,7 @@ package nakamapluskit
 import (
 	"context"
 
-	"github.com/heroiclabs/nakama-common/rtapi"
+	"github.com/doublemo/nakama-plus-common/rtapi"
 )
 
 type (

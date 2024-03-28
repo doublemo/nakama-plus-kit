@@ -5,7 +5,7 @@ import (
 	"errors"
 	"io"
 
-	"github.com/heroiclabs/nakama-common/rtapi"
+	"github.com/doublemo/nakama-plus-common/rtapi"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"

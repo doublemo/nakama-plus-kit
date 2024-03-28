@@ -5,10 +5,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/doublemo/nakama-plus-common/rtapi"
+	"github.com/doublemo/nakama-plus-common/runtime"
 	"github.com/doublemo/nakama-plus-kit/core/etcd"
 	grpcpool "github.com/doublemo/nakama-plus-kit/core/grpc-pool"
-	"github.com/heroiclabs/nakama-common/rtapi"
-	"github.com/heroiclabs/nakama-common/runtime"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/encoding/protojson"
 )

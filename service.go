@@ -7,9 +7,9 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/doublemo/nakama-plus-common/rtapi"
+	"github.com/doublemo/nakama-plus-common/runtime"
 	grpcpool "github.com/doublemo/nakama-plus-kit/core/grpc-pool"
-	"github.com/heroiclabs/nakama-common/rtapi"
-	"github.com/heroiclabs/nakama-common/runtime"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/metadata"
 )
